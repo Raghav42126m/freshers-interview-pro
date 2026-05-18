@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
+import { TypewriterPlaceholder } from "@/components/TypewriterPlaceholder";
 import { generateQuestions } from "@/lib/groq.functions";
 import {
   setupStore,
