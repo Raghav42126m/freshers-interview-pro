@@ -140,12 +140,14 @@ function HomePage() {
           <label className="block text-[11px] tracking-[0.12em] font-semibold uppercase text-muted-foreground">
             What role are you interviewing for?
           </label>
-          <input
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            placeholder="e.g. APM Intern at an Indian AI Startup"
-            className="mt-3 w-full rounded-xl border border-border bg-[oklch(0.11_0.012_280)] px-4 py-3 text-base placeholder:text-muted-foreground/60 outline-none transition input-glow"
-          />
+          <div className="relative mt-3">
+            <input
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full rounded-xl border border-border bg-[oklch(0.11_0.012_280)] px-4 py-3 text-base outline-none transition input-glow"
+            />
+            <TypewriterPlaceholder hidden={role.length > 0} />
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {ROLES.map((r) => {
               const active = role === r;
