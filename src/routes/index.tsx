@@ -108,6 +108,7 @@ function HomePage() {
       setupStore.set(setup);
       questionsStore.set(questions);
       answersStore.set(new Array(questions.length).fill(""));
+      fillerStore.clear();
       navigate({ to: "/interview" });
     } catch (e) {
       console.error(e);
