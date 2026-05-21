@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { evaluateInterview } from "@/lib/groq.functions";
 import {
   answersStore,
+  fillerStore,
   questionsStore,
   scorecardStore,
   setupStore,
@@ -91,7 +92,8 @@ function InterviewPage() {
           qa: questions.map((q, i) => ({ question: q, answer: next[i] ?? "" })),
         },
       });
-      scorecardStore.set(result);
+      const fillers = fillerStore.get();
+      scorecardStore.set({ ...result, fillers });
       navigate({ to: "/scorecard" });
     } catch (e) {
       console.error(e);
