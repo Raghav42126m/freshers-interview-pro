@@ -197,7 +197,7 @@ function InterviewPage() {
             <div className="text-xs text-muted-foreground">{draft.length} characters</div>
             <button
               type="button"
-              onClick={submitAnswer}
+              onClick={() => submitAnswer()}
               disabled={submitting}
               className="rounded-xl bg-gradient-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-60"
             >
