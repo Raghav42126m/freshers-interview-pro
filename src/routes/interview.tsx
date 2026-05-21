@@ -9,6 +9,7 @@ import {
   setupStore,
 } from "@/lib/interview-store";
 import { speak, stopSpeaking } from "@/components/Speaker";
+import { VoiceInput } from "@/components/VoiceInput";
 
 export const Route = createFileRoute("/interview")({
   head: () => ({
@@ -58,9 +59,10 @@ function InterviewPage() {
   const progress = total ? ((idx + 1) / total) * 100 : 0;
   const current = questions[idx] ?? "";
 
-  const submitAnswer = async () => {
+  const submitAnswer = async (override?: string) => {
+    const text = (override ?? draft).trim();
     const next = [...answers];
-    next[idx] = draft.trim();
+    next[idx] = text;
     setAnswers(next);
     answersStore.set(next);
     setDraft("");
@@ -195,7 +197,7 @@ function InterviewPage() {
             <div className="text-xs text-muted-foreground">{draft.length} characters</div>
             <button
               type="button"
-              onClick={submitAnswer}
+              onClick={() => submitAnswer()}
               disabled={submitting}
               className="rounded-xl bg-gradient-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-60"
             >
@@ -206,6 +208,10 @@ function InterviewPage() {
                   : "Submit Answer →"}
             </button>
           </div>
+          <VoiceInput
+            disabled={submitting}
+            onFinalize={(text) => submitAnswer(text)}
+          />
         </section>
       </div>
     </main>
