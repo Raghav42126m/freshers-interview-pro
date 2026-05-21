@@ -64,3 +64,24 @@ export const scorecardStore = {
     return v ? JSON.parse(v) : null;
   },
 };
+
+const FILLER_KEY = "mm_fillers";
+
+export const fillerStore = {
+  add: (counts: Record<string, number>) => {
+    const existing = fillerStore.get();
+    const total = existing.total + Object.values(counts).reduce((a, b) => a + b, 0);
+    const breakdown: Record<string, number> = { ...existing.breakdown };
+    for (const [word, count] of Object.entries(counts)) {
+      if (count > 0) breakdown[word] = (breakdown[word] || 0) + count;
+    }
+    const data: FillerData = { total, breakdown };
+    sessionStorage.setItem(FILLER_KEY, JSON.stringify(data));
+  },
+  get: (): FillerData => {
+    const v = sessionStorage.getItem(FILLER_KEY);
+    if (!v) return { total: 0, breakdown: {} };
+    return JSON.parse(v);
+  },
+  clear: () => sessionStorage.removeItem(FILLER_KEY),
+};
