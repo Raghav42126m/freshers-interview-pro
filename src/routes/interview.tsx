@@ -59,9 +59,10 @@ function InterviewPage() {
   const progress = total ? ((idx + 1) / total) * 100 : 0;
   const current = questions[idx] ?? "";
 
-  const submitAnswer = async () => {
+  const submitAnswer = async (override?: string) => {
+    const text = (override ?? draft).trim();
     const next = [...answers];
-    next[idx] = draft.trim();
+    next[idx] = text;
     setAnswers(next);
     answersStore.set(next);
     setDraft("");
