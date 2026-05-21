@@ -123,6 +123,28 @@ function ScorecardPage() {
           <MetricCard label="Confidence" score={data.confidence} />
         </div>
 
+        {data.fillers && data.fillers.total > 0 && (
+          <div className="mt-6 rounded-xl border border-border bg-card p-4">
+            <div className="text-[11px] tracking-[0.12em] font-semibold uppercase text-muted-foreground">
+              Filler Words
+            </div>
+            <div className="mt-1 text-2xl font-bold">{data.fillers.total}</div>
+            <div className="text-xs text-muted-foreground">total detected</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {Object.entries(data.fillers.breakdown)
+                .filter(([, count]) => count > 0)
+                .map(([word, count]) => (
+                  <span
+                    key={word}
+                    className="inline-flex items-center rounded-full border border-border bg-secondary/40 px-2.5 py-1 text-xs font-medium"
+                  >
+                    {word}: {count}
+                  </span>
+                ))}
+            </div>
+          </div>
+        )}
+
         <div className="mt-10">
           <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Question-by-question feedback
