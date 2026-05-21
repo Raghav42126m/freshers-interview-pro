@@ -13,6 +13,11 @@ export interface QA {
   answer: string;
 }
 
+export interface FillerData {
+  total: number;
+  breakdown: Record<string, number>;
+}
+
 export interface Scorecard {
   overall: number;
   clarity: number;
@@ -20,6 +25,7 @@ export interface Scorecard {
   structure: number;
   confidence: number;
   feedback: { question: string; answer: string; note: string }[];
+  fillers?: FillerData;
 }
 
 const SETUP_KEY = "mm_setup";
