@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { evaluateInterview } from "@/lib/groq.functions";
 import {
   answersStore,
+  fillerStore,
   questionsStore,
   scorecardStore,
   setupStore,
