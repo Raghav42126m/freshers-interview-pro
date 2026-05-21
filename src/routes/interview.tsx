@@ -208,6 +208,10 @@ function InterviewPage() {
                   : "Submit Answer →"}
             </button>
           </div>
+          <VoiceInput
+            disabled={submitting}
+            onFinalize={(text) => submitAnswer(text)}
+          />
         </section>
       </div>
     </main>
