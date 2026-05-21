@@ -9,6 +9,7 @@ import {
   setupStore,
 } from "@/lib/interview-store";
 import { speak, stopSpeaking } from "@/components/Speaker";
+import { VoiceInput } from "@/components/VoiceInput";
 
 export const Route = createFileRoute("/interview")({
   head: () => ({
