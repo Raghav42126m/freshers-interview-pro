@@ -7,6 +7,7 @@ import {
   setupStore,
   questionsStore,
   answersStore,
+  fillerStore,
   type Difficulty,
   type InterviewType,
 } from "@/lib/interview-store";
