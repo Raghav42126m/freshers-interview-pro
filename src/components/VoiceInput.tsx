@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { fillerStore } from "@/lib/interview-store";
 
 type SpeechRecognitionLike = any;
 
@@ -9,6 +10,25 @@ function getRecognitionCtor(): any | null {
 
 export function isVoiceInputSupported(): boolean {
   return !!getRecognitionCtor();
+}
+
+const FILLER_WORDS = ["um", "uh", "like", "basically", "you know", "acha", "toh", "sort of", "kind of"];
+
+function countFillers(text: string): Record<string, number> {
+  const lower = text.toLowerCase();
+  const counts: Record<string, number> = {};
+  for (const word of FILLER_WORDS) {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    let pattern: string;
+    if (word.includes(" ")) {
+      pattern = `(?:^|[\\s,;.!?:])${escaped.replace(/ /g, "[\\s,;.!?:]+")}(?:$|[\\s,;.!?:])`;
+    } else {
+      pattern = `(?:^|[\\s,;.!?:])${escaped}(?:$|[\\s,;.!?:])`;
+    }
+    const matches = lower.match(new RegExp(pattern, "gi"));
+    counts[word] = matches ? matches.length : 0;
+  }
+  return counts;
 }
 
 interface Props {
@@ -35,6 +55,18 @@ export function VoiceInput({ disabled, onFinalize }: Props) {
       } catch {}
     };
   }, []);
+
+  const fillerCounts = useMemo(() => {
+    const combined = [finalText, interimText].filter(Boolean).join(" ");
+    return countFillers(combined);
+  }, [finalText, interimText]);
+
+  const activeFillers = useMemo(() => {
+    return Object.entries(fillerCounts)
+      .filter(([, count]) => count > 0)
+      .map(([word, count]) => `${word}: ${count}`)
+      .join(" · ");
+  }, [fillerCounts]);
 
   const start = async () => {
     const Ctor = getRecognitionCtor();
@@ -97,7 +129,10 @@ export function VoiceInput({ disabled, onFinalize }: Props) {
     } catch {}
     const combined = [finalText, interimText].filter(Boolean).join(" ").trim();
     setRecording(false);
-    if (combined) onFinalize(combined);
+    if (combined) {
+      fillerStore.add(fillerCounts);
+      onFinalize(combined);
+    }
     setFinalText("");
     setInterimText("");
   };
@@ -118,7 +153,7 @@ export function VoiceInput({ disabled, onFinalize }: Props) {
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-border bg-card p-4">
+    <div className="mt-3 rounded-xl border border-border bg-card p-4 relative">
       <div className="flex items-center gap-2 text-xs font-medium text-destructive">
         <span className="relative inline-flex h-2.5 w-2.5">
           <span className="absolute inset-0 rounded-full bg-destructive opacity-75 animate-ping" />
@@ -135,7 +170,13 @@ export function VoiceInput({ disabled, onFinalize }: Props) {
           </span>
         )}
       </p>
-      <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex items-center justify-between">
+        {activeFillers && (
+          <div className="text-[11px] text-muted-foreground">
+            {activeFillers}
+          </div>
+        )}
+        <div className="flex-1" />
         <button
           type="button"
           onClick={stopAndSubmit}
