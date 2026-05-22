@@ -40,9 +40,10 @@ export function VoiceInput({ disabled, onFinalize }: Props) {
   const [supported, setSupported] = useState(true);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [finalText, setFinalText] = useState("");
-  const [interimText, setInterimText] = useState("");
+  const [finalTranscript, setFinalTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const keepRecordingRef = useRef(false);
 
   useEffect(() => {
     setSupported(isVoiceInputSupported());
@@ -57,9 +58,9 @@ export function VoiceInput({ disabled, onFinalize }: Props) {
   }, []);
 
   const fillerCounts = useMemo(() => {
-    const combined = [finalText, interimText].filter(Boolean).join(" ");
+    const combined = [finalTranscript, interimTranscript].filter(Boolean).join(" ");
     return countFillers(combined);
-  }, [finalText, interimText]);
+  }, [finalTranscript, interimTranscript]);
 
   const activeFillers = useMemo(() => {
     return Object.entries(fillerCounts)
@@ -89,53 +90,76 @@ export function VoiceInput({ disabled, onFinalize }: Props) {
     recognition.lang = "en-US";
 
     recognition.onresult = (event: any) => {
-      let interim = "";
+      const finalChunks: string[] = [];
+      let currentInterim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const res = event.results[i];
         const transcript = res[0].transcript;
         if (res.isFinal) {
           const finalChunk = transcript.trim();
           if (finalChunk) {
-            setFinalText((prev) => (prev ? `${prev} ${finalChunk}` : finalChunk));
+            finalChunks.push(finalChunk);
           }
         } else {
-          interim += transcript;
+          currentInterim = transcript.trim();
         }
       }
-      setInterimText(interim);
+      if (finalChunks.length > 0) {
+        setFinalTranscript((prev) => (prev ? `${prev} ${finalChunks.join(" ")}` : finalChunks.join(" ")));
+      }
+      setInterimTranscript(currentInterim);
     };
     recognition.onerror = (e: any) => {
       if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+        keepRecordingRef.current = false;
+        setRecording(false);
         setPermissionDenied(true);
       }
     };
     recognition.onend = () => {
-      setRecording(false);
+      if (!keepRecordingRef.current) {
+        setRecording(false);
+        return;
+      }
+
+      try {
+        recognition.start();
+      } catch {
+        setTimeout(() => {
+          if (!keepRecordingRef.current) return;
+          try {
+            recognition.start();
+          } catch {}
+        }, 300);
+      }
     };
 
     recognitionRef.current = recognition;
-    setFinalText("");
-    setInterimText("");
+    setFinalTranscript("");
+    setInterimTranscript("");
+    keepRecordingRef.current = true;
     setRecording(true);
     try {
       recognition.start();
     } catch {
+      keepRecordingRef.current = false;
       setRecording(false);
     }
   };
 
   const stopAndSubmit = () => {
+    keepRecordingRef.current = false;
     try {
       recognitionRef.current?.stop();
     } catch {}
-    const combined = [finalText, interimText].filter(Boolean).join(" ").trim();
+    const combined = [finalTranscript, interimTranscript].filter(Boolean).join(" ").trim();
     setRecording(false);
     if (combined) {
       fillerStore.add(fillerCounts);
       onFinalize(combined);
     }
-    setFinalText("");
-    setInterimText("");
+    setFinalTranscript("");
+    setInterimTranscript("");
   };
 
   if (!supported || permissionDenied) return null;
@@ -163,11 +187,11 @@ export function VoiceInput({ disabled, onFinalize }: Props) {
         Recording…
       </div>
       <p className="mt-3 text-sm leading-relaxed min-h-[3rem]">
-        <span className="text-foreground">{finalText}</span>
-        {interimText && (
+        <span className="text-foreground">{finalTranscript}</span>
+        {interimTranscript && (
           <span className="text-muted-foreground">
-            {finalText ? " " : ""}
-            {interimText}
+            {finalTranscript ? " " : ""}
+            {interimTranscript}
           </span>
         )}
       </p>
