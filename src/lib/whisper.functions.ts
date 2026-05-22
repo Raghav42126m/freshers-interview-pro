@@ -6,8 +6,8 @@ export const transcribeAudio = createServerFn({ method: "POST" })
     const key = process.env.GROQ_API_KEY;
     if (!key) throw new Error("GROQ_API_KEY not configured");
 
-    const file = data.get("file");
-    if (!(file instanceof File) && !(file instanceof Blob)) {
+    const file = data.get("file") as unknown as Blob | null;
+    if (!file || typeof (file as Blob).arrayBuffer !== "function") {
       throw new Error("No audio file provided");
     }
 
