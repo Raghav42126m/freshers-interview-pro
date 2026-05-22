@@ -1,34 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { fillerStore } from "@/lib/interview-store";
+import { transcribeAudio } from "@/lib/whisper.functions";
 
-type SpeechRecognitionLike = any;
-
-function getRecognitionCtor(): any | null {
-  if (typeof window === "undefined") return null;
-  return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
-}
-
-export function isVoiceInputSupported(): boolean {
-  return !!getRecognitionCtor();
-}
-
-const FILLER_WORDS = ["um", "uh", "like", "basically", "you know", "acha", "toh", "sort of", "kind of"];
+const FILLER_WORDS = ["um", "uh", "like", "basically", "you know", "acha", "toh", "sort of", "kind of", "hmm"];
 
 function countFillers(text: string): Record<string, number> {
   const lower = text.toLowerCase();
   const counts: Record<string, number> = {};
   for (const word of FILLER_WORDS) {
     const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    let pattern: string;
-    if (word.includes(" ")) {
-      pattern = `(?:^|[\\s,;.!?:])${escaped.replace(/ /g, "[\\s,;.!?:]+")}(?:$|[\\s,;.!?:])`;
-    } else {
-      pattern = `(?:^|[\\s,;.!?:])${escaped}(?:$|[\\s,;.!?:])`;
-    }
+    const pattern = word.includes(" ")
+      ? `(?:^|[\\s,;.!?:])${escaped.replace(/ /g, "[\\s,;.!?:]+")}(?:$|[\\s,;.!?:])`
+      : `(?:^|[\\s,;.!?:])${escaped}(?:$|[\\s,;.!?:])`;
     const matches = lower.match(new RegExp(pattern, "gi"));
     counts[word] = matches ? matches.length : 0;
   }
   return counts;
+}
+
+function formatTime(secs: number): string {
+  const m = Math.floor(secs / 60).toString().padStart(2, "0");
+  const s = (secs % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
 }
 
 interface Props {
@@ -37,134 +31,120 @@ interface Props {
 }
 
 export function VoiceInput({ disabled, onFinalize }: Props) {
-  const [supported, setSupported] = useState(true);
+  const transcribe = useServerFn(transcribeAudio);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [finalTranscript, setFinalTranscript] = useState("");
-  const [interimTranscript, setInterimTranscript] = useState("");
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const keepRecordingRef = useRef(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [transcript, setTranscript] = useState("");
 
-  useEffect(() => {
-    setSupported(isVoiceInputSupported());
-  }, []);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
       try {
-        recognitionRef.current?.stop();
+        mediaRecorderRef.current?.stop();
       } catch {}
+      streamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
 
-  const fillerCounts = useMemo(() => {
-    const combined = [finalTranscript, interimTranscript].filter(Boolean).join(" ");
-    return countFillers(combined);
-  }, [finalTranscript, interimTranscript]);
-
-  const activeFillers = useMemo(() => {
-    return Object.entries(fillerCounts)
-      .filter(([, count]) => count > 0)
-      .map(([word, count]) => `${word}: ${count}`)
-      .join(" · ");
-  }, [fillerCounts]);
+  const fillerCounts = useMemo(() => countFillers(transcript), [transcript]);
+  const activeFillers = useMemo(
+    () =>
+      Object.entries(fillerCounts)
+        .filter(([, c]) => c > 0)
+        .map(([w, c]) => `${w}: ${c}`)
+        .join(" · "),
+    [fillerCounts],
+  );
 
   const start = async () => {
-    const Ctor = getRecognitionCtor();
-    if (!Ctor) {
-      setSupported(false);
-      return;
-    }
-    // Request mic permission explicitly so denial falls back silently
+    let stream: MediaStream;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       setPermissionDenied(true);
       return;
     }
+    streamRef.current = stream;
+    chunksRef.current = [];
 
-    const recognition: SpeechRecognitionLike = new Ctor();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
+    const mimeCandidates = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4",
+      "audio/ogg;codecs=opus",
+    ];
+    const mimeType = mimeCandidates.find((m) =>
+      typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported?.(m),
+    );
 
-    recognition.onresult = (event: any) => {
-      const finalChunks: string[] = [];
-      let currentInterim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const res = event.results[i];
-        const transcript = res[0].transcript;
-        if (res.isFinal) {
-          const finalChunk = transcript.trim();
-          if (finalChunk) {
-            finalChunks.push(finalChunk);
-          }
-        } else {
-          currentInterim = transcript.trim();
-        }
-      }
-      if (finalChunks.length > 0) {
-        setFinalTranscript((prev) => (prev ? `${prev} ${finalChunks.join(" ")}` : finalChunks.join(" ")));
-      }
-      setInterimTranscript(currentInterim);
+    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
     };
-    recognition.onerror = (e: any) => {
-      if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
-        keepRecordingRef.current = false;
-        setRecording(false);
-        setPermissionDenied(true);
-      }
-    };
-    recognition.onend = () => {
-      if (!keepRecordingRef.current) {
-        setRecording(false);
+    recorder.onstop = async () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      const blob = new Blob(chunksRef.current, {
+        type: mimeType || chunksRef.current[0]?.type || "audio/webm",
+      });
+      chunksRef.current = [];
+      if (blob.size === 0) {
+        setTranscribing(false);
         return;
       }
-
+      setTranscribing(true);
       try {
-        recognition.start();
-      } catch {
-        setTimeout(() => {
-          if (!keepRecordingRef.current) return;
-          try {
-            recognition.start();
-          } catch {}
-        }, 300);
+        const fd = new FormData();
+        const ext = (mimeType || "audio/webm").includes("mp4") ? "m4a" : "webm";
+        fd.append("file", blob, `audio.${ext}`);
+        const result = await transcribe({ data: fd });
+        const text = (result?.text ?? "").trim();
+        setTranscript(text);
+      } catch (err) {
+        console.error(err);
+        alert("Transcription failed. Please try again.");
+      } finally {
+        setTranscribing(false);
       }
     };
 
-    recognitionRef.current = recognition;
-    setFinalTranscript("");
-    setInterimTranscript("");
-    keepRecordingRef.current = true;
+    mediaRecorderRef.current = recorder;
+    recorder.start();
     setRecording(true);
-    try {
-      recognition.start();
-    } catch {
-      keepRecordingRef.current = false;
-      setRecording(false);
-    }
+    setElapsed(0);
+    setTranscript("");
+    timerRef.current = window.setInterval(() => setElapsed((e) => e + 1), 1000);
   };
 
-  const stopAndSubmit = () => {
-    keepRecordingRef.current = false;
-    try {
-      recognitionRef.current?.stop();
-    } catch {}
-    const combined = [finalTranscript, interimTranscript].filter(Boolean).join(" ").trim();
+  const stopRecording = () => {
+    if (timerRef.current) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     setRecording(false);
-    if (combined) {
-      fillerStore.add(fillerCounts);
-      onFinalize(combined);
-    }
-    setFinalTranscript("");
-    setInterimTranscript("");
+    try {
+      mediaRecorderRef.current?.stop();
+    } catch {}
   };
 
-  if (!supported || permissionDenied) return null;
+  const submit = () => {
+    const text = transcript.trim();
+    if (!text) return;
+    fillerStore.add(countFillers(text));
+    onFinalize(text);
+    setTranscript("");
+  };
 
-  if (!recording) {
+  if (permissionDenied) return null;
+
+  if (!recording && !transcribing && !transcript) {
     return (
       <button
         type="button"
@@ -178,38 +158,79 @@ export function VoiceInput({ disabled, onFinalize }: Props) {
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-border bg-card p-4 relative">
-      <div className="flex items-center gap-2 text-xs font-medium text-destructive">
-        <span className="relative inline-flex h-2.5 w-2.5">
-          <span className="absolute inset-0 rounded-full bg-destructive opacity-75 animate-ping" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
-        </span>
-        Recording…
-      </div>
-      <p className="mt-3 text-sm leading-relaxed min-h-[3rem]">
-        <span className="text-foreground">{finalTranscript}</span>
-        {interimTranscript && (
-          <span className="text-muted-foreground">
-            {finalTranscript ? " " : ""}
-            {interimTranscript}
-          </span>
-        )}
-      </p>
-      <div className="mt-3 flex items-center justify-between">
-        {activeFillers && (
-          <div className="text-[11px] text-muted-foreground">
-            {activeFillers}
+    <div className="mt-3 rounded-xl border border-border bg-card p-4">
+      {recording && (
+        <>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-medium text-destructive">
+              <span className="relative inline-flex h-2.5 w-2.5">
+                <span className="absolute inset-0 rounded-full bg-destructive opacity-75 animate-ping" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
+              </span>
+              Recording…
+            </div>
+            <div className="text-xs font-mono text-muted-foreground tabular-nums">
+              {formatTime(elapsed)}
+            </div>
           </div>
-        )}
-        <div className="flex-1" />
-        <button
-          type="button"
-          onClick={stopAndSubmit}
-          className="rounded-xl bg-gradient-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-glow"
-        >
-          Stop & Submit
-        </button>
-      </div>
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={stopRecording}
+              className="rounded-xl bg-gradient-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-glow"
+            >
+              Stop & Submit
+            </button>
+          </div>
+        </>
+      )}
+
+      {transcribing && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-block h-3 w-3 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" />
+          Transcribing…
+        </div>
+      )}
+
+      {!recording && !transcribing && transcript && (
+        <>
+          <label className="block text-[11px] tracking-[0.12em] font-semibold uppercase text-muted-foreground">
+            Transcript (editable)
+          </label>
+          <textarea
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            rows={5}
+            className="mt-2 w-full rounded-lg border border-border bg-[oklch(0.11_0.012_280)] px-3 py-2 text-sm outline-none resize-none"
+          />
+          <div className="mt-3 flex items-center justify-between gap-3">
+            {activeFillers ? (
+              <div className="text-[11px] text-muted-foreground">{activeFillers}</div>
+            ) : (
+              <div />
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setTranscript("");
+                  start();
+                }}
+                className="rounded-xl border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-secondary/40"
+              >
+                Re-record
+              </button>
+              <button
+                type="button"
+                onClick={submit}
+                className="rounded-xl bg-gradient-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-glow"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
