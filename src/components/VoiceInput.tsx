@@ -88,19 +88,20 @@ export function VoiceInput({ disabled, onFinalize }: Props) {
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
-    let accumulated = "";
     recognition.onresult = (event: any) => {
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const res = event.results[i];
         const transcript = res[0].transcript;
         if (res.isFinal) {
-          accumulated += (accumulated ? " " : "") + transcript.trim();
+          const finalChunk = transcript.trim();
+          if (finalChunk) {
+            setFinalText((prev) => (prev ? `${prev} ${finalChunk}` : finalChunk));
+          }
         } else {
           interim += transcript;
         }
       }
-      setFinalText(accumulated);
       setInterimText(interim);
     };
     recognition.onerror = (e: any) => {
