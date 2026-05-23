@@ -20,10 +20,16 @@ export interface FillerData {
 
 export interface Scorecard {
   overall: number;
+  overallOutOf10?: number;
   clarity: number;
   relevance: number;
   structure: number;
   confidence: number;
+  bestAnswerIndex?: number;
+  bestAnswerReason?: string;
+  weakestAnswerIndex?: number;
+  weakestAnswerSuggestion?: string;
+  keyTip?: string;
   feedback: { question: string; answer: string; note: string }[];
   fillers?: FillerData;
 }
