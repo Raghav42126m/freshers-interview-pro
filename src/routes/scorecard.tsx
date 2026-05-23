@@ -141,7 +141,7 @@ function ScorecardPage() {
   return (
     <main className="min-h-screen px-4 py-12">
       <div className="max-w-[640px] mx-auto">
-        <div ref={cardRef} className="space-y-4 p-2">
+        <div id="scorecard" className="space-y-4 p-2">
           <div className="text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-3 py-1 text-xs font-medium">
               <span className="h-1.5 w-1.5 rounded-full bg-primary pulse-dot" />
