@@ -30,11 +30,53 @@ function MetricCard({ label, score }: { label: string; score: number }) {
   );
 }
 
+// html2canvas v1 cannot parse modern color functions (oklch, color-mix, lab).
+// We walk the cloned tree and inline computed colors converted to rgb()
+// via a 2d canvas, which normalizes any color the browser understands.
+function normalizeColorsForCapture(root: HTMLElement) {
+  const probe = document.createElement("canvas").getContext("2d");
+  if (!probe) return;
+  const toRgb = (value: string): string | null => {
+    if (!value || value === "none" || value === "transparent") return null;
+    try {
+      probe.fillStyle = "#000";
+      probe.fillStyle = value;
+      return probe.fillStyle as string;
+    } catch {
+      return null;
+    }
+  };
+  const props = [
+    "color",
+    "backgroundColor",
+    "borderTopColor",
+    "borderRightColor",
+    "borderBottomColor",
+    "borderLeftColor",
+    "outlineColor",
+    "fill",
+    "stroke",
+  ] as const;
+  const all = root.querySelectorAll<HTMLElement>("*");
+  const apply = (el: HTMLElement) => {
+    const cs = window.getComputedStyle(el);
+    for (const p of props) {
+      const v = toRgb(cs[p as never] as string);
+      if (v) (el.style as any)[p] = v;
+    }
+    const bg = cs.backgroundImage;
+    if (bg && bg !== "none" && /oklch|color-mix|lab\(|lch\(/i.test(bg)) {
+      el.style.backgroundImage = "none";
+    }
+  };
+  apply(root);
+  all.forEach(apply);
+}
+
 function ScorecardPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<Scorecard | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const s = scorecardStore.get();
@@ -46,20 +88,27 @@ function ScorecardPage() {
   }, [navigate]);
 
   const handleDownload = async () => {
-    if (!cardRef.current) return;
+    const el = document.getElementById("scorecard");
+    if (!el) return;
     setDownloading(true);
     try {
-      const canvas = await html2canvas(cardRef.current, {
+      const canvas = await html2canvas(el, {
         backgroundColor: "#0a0a0f",
         scale: 2,
         useCORS: true,
+        logging: false,
+        onclone: (_doc, cloned) => {
+          if (cloned instanceof HTMLElement) normalizeColorsForCapture(cloned);
+        },
       });
       const link = document.createElement("a");
       link.download = "mockmate-scorecard.png";
       link.href = canvas.toDataURL("image/png");
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch (e) {
-      console.error(e);
+      console.error("Scorecard download failed:", e);
     } finally {
       setDownloading(false);
     }
