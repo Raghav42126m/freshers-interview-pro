@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import html2canvas from "html2canvas";
 import { scorecardStore, type Scorecard } from "@/lib/interview-store";
 
