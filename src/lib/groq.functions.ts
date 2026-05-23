@@ -75,10 +75,16 @@ export const evaluateInterview = createServerFn({ method: "POST" })
     const sys = `You are a strict but fair Indian interview coach. Evaluate the candidate's answers. Return ONLY JSON in this exact shape:
 {
   "overall": <0-100 integer>,
+  "overallOutOf10": <0-10 number, one decimal>,
   "clarity": <0-10>,
   "relevance": <0-10>,
   "structure": <0-10>,
   "confidence": <0-10>,
+  "bestAnswerIndex": <0-based index>,
+  "bestAnswerReason": "<one short sentence, <25 words>",
+  "weakestAnswerIndex": <0-based index>,
+  "weakestAnswerSuggestion": "<one short improvement, <25 words>",
+  "keyTip": "<one specific actionable tip, <30 words>",
   "feedback": [{"note": "<one short improvement tip, <25 words>"}]
 }
 The feedback array must have exactly one entry per question, in order.`;
@@ -101,12 +107,28 @@ Score honestly. Empty/very short answers should score low.`;
       answer: data.qa[i]?.answer ?? "",
       note: f?.note ?? "",
     }));
+    const n = data.qa.length;
+    const clampIdx = (v: unknown) => {
+      const i = Number(v);
+      return Number.isFinite(i) && i >= 0 && i < n ? Math.floor(i) : 0;
+    };
+    const overall = Math.max(0, Math.min(100, Number(parsed.overall) || 0));
+    const overallOutOf10 =
+      typeof parsed.overallOutOf10 === "number"
+        ? Math.max(0, Math.min(10, parsed.overallOutOf10))
+        : Math.round((overall / 10) * 10) / 10;
     return {
-      overall: Math.max(0, Math.min(100, Number(parsed.overall) || 0)),
+      overall,
+      overallOutOf10,
       clarity: Math.max(0, Math.min(10, Number(parsed.clarity) || 0)),
       relevance: Math.max(0, Math.min(10, Number(parsed.relevance) || 0)),
       structure: Math.max(0, Math.min(10, Number(parsed.structure) || 0)),
       confidence: Math.max(0, Math.min(10, Number(parsed.confidence) || 0)),
+      bestAnswerIndex: clampIdx(parsed.bestAnswerIndex),
+      bestAnswerReason: String(parsed.bestAnswerReason ?? ""),
+      weakestAnswerIndex: clampIdx(parsed.weakestAnswerIndex),
+      weakestAnswerSuggestion: String(parsed.weakestAnswerSuggestion ?? ""),
+      keyTip: String(parsed.keyTip ?? ""),
       feedback,
     };
   });
