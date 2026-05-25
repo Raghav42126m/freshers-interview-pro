@@ -93,7 +93,15 @@ function ScorecardPage() {
     setData(s);
   }, [navigate]);
 
-  const downloadImage = async () => {
+  const isMobile =
+    typeof navigator !== "undefined" &&
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  const handleDownload = async () => {
+    if (!isMobile) {
+      window.print();
+      return;
+    }
     const element = document.getElementById("scorecard-capture");
     if (!element) return;
     setDownloading(true);
@@ -108,21 +116,14 @@ function ScorecardPage() {
         },
       });
       const dataUrl = canvas.toDataURL("image/png");
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        const t = window.open();
-        if (t) {
-          t.document.write(
-            `<img src="${dataUrl}" style="width:100%;max-width:600px;display:block;margin:auto;">`,
-          );
-          t.document.write(
-            '<p style="text-align:center;font-family:sans-serif;color:#666;">Press and hold image → Save to Photos</p>',
-          );
-        }
-      } else {
-        const a = document.createElement("a");
-        a.download = "mockmate-scorecard.png";
-        a.href = dataUrl;
-        a.click();
+      const t = window.open();
+      if (t) {
+        t.document.write(
+          `<img src="${dataUrl}" style="width:100%;max-width:600px;display:block;margin:auto;">`,
+        );
+        t.document.write(
+          '<p style="text-align:center;font-family:sans-serif;color:#666;">Press and hold image → Save to Photos</p>',
+        );
       }
     } catch (err) {
       console.error("Download failed:", err);
@@ -159,9 +160,18 @@ function ScorecardPage() {
     data.weakestAnswerIndex !== undefined ? data.feedback[data.weakestAnswerIndex] : undefined;
 
   return (
-    <main id="scorecard-capture" className="min-h-screen px-4 py-12">
+    <main className="min-h-screen px-4 py-12">
+      <style>{`
+        @media print {
+          @page { size: portrait; margin: 0; }
+          body * { visibility: hidden !important; }
+          #scorecard-capture, #scorecard-capture * { visibility: visible !important; }
+          #scorecard-capture { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+      `}</style>
       <div className="max-w-[640px] mx-auto">
         <div
+          id="scorecard-capture"
           style={{ backgroundColor: "#0f0f0f", padding: "24px" }}
           className="rounded-2xl space-y-4 text-white"
         >
@@ -287,11 +297,11 @@ function ScorecardPage() {
         <div className="mt-10 flex flex-col gap-3">
           <button
             type="button"
-            onClick={downloadImage}
+            onClick={handleDownload}
             disabled={downloading}
             className="w-full rounded-xl bg-gradient-primary py-3 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-60"
           >
-            {downloading ? "Generating image…" : "Download Scorecard"}
+            {downloading ? "Generating image…" : isMobile ? "Save as Image" : "Download PDF"}
           </button>
           <button
             type="button"
