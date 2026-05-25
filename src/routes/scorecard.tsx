@@ -171,6 +171,7 @@ function ScorecardPage() {
       `}</style>
       <div className="max-w-[640px] mx-auto">
         <div
+          id="scorecard-capture"
           style={{ backgroundColor: "#0f0f0f", padding: "24px" }}
           className="rounded-2xl space-y-4 text-white"
         >
