@@ -287,11 +287,11 @@ function ScorecardPage() {
         <div className="mt-10 flex flex-col gap-3">
           <button
             type="button"
-            onClick={handleDownload}
+            onClick={downloadImage}
             disabled={downloading}
             className="w-full rounded-xl bg-gradient-primary py-3 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-60"
           >
-            {downloading ? "Generating image…" : "📥 Download as Image"}
+            {downloading ? "Generating image…" : "Download Scorecard"}
           </button>
           <button
             type="button"
