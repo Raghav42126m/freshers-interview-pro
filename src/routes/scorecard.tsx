@@ -162,7 +162,6 @@ function ScorecardPage() {
     <main id="scorecard-capture" className="min-h-screen px-4 py-12">
       <div className="max-w-[640px] mx-auto">
         <div
-          id="scorecard-capture"
           style={{ backgroundColor: "#0f0f0f", padding: "24px" }}
           className="rounded-2xl space-y-4 text-white"
         >
