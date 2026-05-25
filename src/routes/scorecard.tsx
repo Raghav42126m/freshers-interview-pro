@@ -93,7 +93,7 @@ function ScorecardPage() {
     setData(s);
   }, [navigate]);
 
-  const handleDownload = async () => {
+  const downloadImage = async () => {
     const element = document.getElementById("scorecard-capture");
     if (!element) return;
     setDownloading(true);
@@ -102,19 +102,28 @@ function ScorecardPage() {
         scale: 2,
         useCORS: true,
         backgroundColor: "#0f0f0f",
-        windowWidth: 600,
-        width: 600,
         onclone: (doc) => {
           const el = doc.getElementById("scorecard-capture");
           if (el) normalizeColorsForCapture(el);
         },
       });
-      const link = document.createElement("a");
-      link.download = "mockmate-scorecard.png";
-      link.href = canvas.toDataURL("image/png");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const dataUrl = canvas.toDataURL("image/png");
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        const t = window.open();
+        if (t) {
+          t.document.write(
+            `<img src="${dataUrl}" style="width:100%;max-width:600px;display:block;margin:auto;">`,
+          );
+          t.document.write(
+            '<p style="text-align:center;font-family:sans-serif;color:#666;">Press and hold image → Save to Photos</p>',
+          );
+        }
+      } else {
+        const a = document.createElement("a");
+        a.download = "mockmate-scorecard.png";
+        a.href = dataUrl;
+        a.click();
+      }
     } catch (err) {
       console.error("Download failed:", err);
     } finally {
