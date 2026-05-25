@@ -160,7 +160,15 @@ function ScorecardPage() {
     data.weakestAnswerIndex !== undefined ? data.feedback[data.weakestAnswerIndex] : undefined;
 
   return (
-    <main id="scorecard-capture" className="min-h-screen px-4 py-12">
+    <main className="min-h-screen px-4 py-12">
+      <style>{`
+        @media print {
+          @page { size: portrait; margin: 0; }
+          body * { visibility: hidden !important; }
+          #scorecard-capture, #scorecard-capture * { visibility: visible !important; }
+          #scorecard-capture { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+      `}</style>
       <div className="max-w-[640px] mx-auto">
         <div
           style={{ backgroundColor: "#0f0f0f", padding: "24px" }}
