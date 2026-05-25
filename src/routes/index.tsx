@@ -226,8 +226,9 @@ function HomePage() {
             onClick={start}
             className={`mt-7 w-full rounded-xl py-3.5 text-sm sm:text-base font-semibold transition ${
               canStart
-                ? "bg-gradient-primary text-primary-foreground shadow-glow hover:opacity-95"
-                : "bg-secondary/40 text-muted-foreground cursor-not-allowed"
+                canStart
+              ? "bg-gradient-primary text-primary-foreground shadow-glow hover:opacity-95 btn-glow-active"
+              : "bg-secondary/40 text-muted-foreground cursor-not-allowed"
             }`}
           >
             {loading
