@@ -159,7 +159,7 @@ function ScorecardPage() {
     data.weakestAnswerIndex !== undefined ? data.feedback[data.weakestAnswerIndex] : undefined;
 
   return (
-    <main className="min-h-screen px-4 py-12">
+    <main id="scorecard-capture" className="min-h-screen px-4 py-12">
       <div className="max-w-[640px] mx-auto">
         <div
           id="scorecard-capture"
