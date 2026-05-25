@@ -161,7 +161,7 @@ function HomePage() {
                   className={`rounded-full px-3 py-1.5 text-xs font-medium border transition ${
                     active
                       ? "border-primary/70 bg-primary/15 text-foreground shadow-glow-sm"
-                      : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-border"
+                      : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/10"
                   }`}
                 >
                   {r}
@@ -183,9 +183,9 @@ function HomePage() {
                   type="button"
                   onClick={() => setType(t.id)}
                   className={`text-left rounded-xl border p-4 transition ${
-                    active
-                      ? "border-primary/60 bg-primary/10 shadow-glow-sm"
-                      : "border-border bg-secondary/30 hover:border-border"
+                   active
+                    ? "border-primary bg-primary/20 shadow-glow-sm ring-1 ring-primary/40"
+                    : "border-border bg-secondary/30 hover:border-primary/40 hover:bg-secondary/50"
                   }`}
                 >
                   <div className="text-sm font-semibold">{t.title}</div>
