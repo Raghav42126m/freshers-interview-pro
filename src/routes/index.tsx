@@ -123,7 +123,7 @@ function HomePage() {
 <div className="absolute bottom-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full bg-fuchsia-600/15 blur-[120px] pointer-events-none" />
       <div className="w-full max-w-[560px] flex flex-col items-center">
         {/* Pill badge */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-3 py-1 text-xs font-medium text-primary-foreground/90">
+        <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-3 py-1 text-xs font-medium text-primary-foreground/90 badge-shimmer">
           <span className="h-1.5 w-1.5 rounded-full bg-primary pulse-dot" />
           AI Interview Coach
         </div>
