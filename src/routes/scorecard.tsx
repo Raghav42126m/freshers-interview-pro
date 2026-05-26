@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import html2canvas from "html2canvas";
 import { scorecardStore, type Scorecard } from "@/lib/interview-store";
+
 function useCountUp(target: number, duration = 1000) {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -104,6 +105,14 @@ function ScorecardPage() {
   const [submitted, setSubmitted] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
+  // Hook must be called unconditionally — before any early return
+  const rawScore = data
+    ? typeof data.overallOutOf10 === "number"
+      ? data.overallOutOf10
+      : Math.round((data.overall / 10) * 10) / 10
+    : 0;
+  const animatedOverall = useCountUp(rawScore, 1500);
+
   useEffect(() => {
     const s = scorecardStore.get();
     if (!s) {
@@ -116,11 +125,13 @@ function ScorecardPage() {
   const isMobile =
     typeof navigator !== "undefined" &&
     /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
   const handleDownload = async () => {
     if (!isMobile) {
       window.print();
       return;
     }
+    if (!data) return;
     const text = `My MockMate Scorecard 🎯
 Overall: ${animatedOverall.toFixed(1)}/10
 Clarity: ${data.clarity} | Relevance: ${data.relevance} | Structure: ${data.structure} | Confidence: ${data.confidence}
@@ -140,6 +151,7 @@ Practice at mockmate.r3810891.workers.dev`;
       console.error("Share failed:", err);
     }
   };
+
   const handleSubmitFeedback = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
@@ -153,11 +165,8 @@ Practice at mockmate.r3810891.workers.dev`;
     );
   }
 
-  const outOf10 =
-    typeof data.overallOutOf10 === "number"
-      ? data.overallOutOf10
-      : Math.round((data.overall / 10) * 10) / 10;
-  const animatedOverall = useCountUp(outOf10, 1500);
+  const outOf10 = rawScore;
+
   const fillerBreakdown = data.fillers
     ? Object.entries(data.fillers.breakdown).filter(([, c]) => c > 0)
     : [];
@@ -170,13 +179,13 @@ Practice at mockmate.r3810891.workers.dev`;
   return (
     <main className="min-h-screen px-4 py-12">
       <style>{`
-      @media print {
-      @page { size: A4 portrait; margin: 10mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      body * { visibility: hidden !important; }
-      #scorecard-capture, #scorecard-capture * { visibility: visible !important; }
-      #scorecard-capture { position: absolute; left: 0; top: 0; width: 100%; }
-      }
+        @media print {
+          @page { size: A4 portrait; margin: 10mm; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body * { visibility: hidden !important; }
+          #scorecard-capture, #scorecard-capture * { visibility: visible !important; }
+          #scorecard-capture { position: absolute; left: 0; top: 0; width: 100%; }
+        }
       `}</style>
       <div className="max-w-[640px] mx-auto">
         <div
