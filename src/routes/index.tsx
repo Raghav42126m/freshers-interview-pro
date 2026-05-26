@@ -118,7 +118,9 @@ function HomePage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-12">
+    <main className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      <div className="absolute top-[-200px] left-[-100px] w-[500px] h-[500px] rounded-full bg-indigo-600/20 blur-[120px] pointer-events-none" />
+<div className="absolute bottom-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full bg-fuchsia-600/15 blur-[120px] pointer-events-none" />
       <div className="w-full max-w-[560px] flex flex-col items-center">
         {/* Pill badge */}
         <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-3 py-1 text-xs font-medium text-primary-foreground/90">
