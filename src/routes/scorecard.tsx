@@ -2,6 +2,25 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import html2canvas from "html2canvas";
 import { scorecardStore, type Scorecard } from "@/lib/interview-store";
+function useCountUp(target: number, duration = 1000) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (target === 0) return;
+    let start = 0;
+    const increment = target / (duration / 16);
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= target) {
+        setCount(target);
+        clearInterval(timer);
+      } else {
+        setCount(Math.round(start * 10) / 10);
+      }
+    }, 16);
+    return () => clearInterval(timer);
+  }, [target, duration]);
+  return count;
+}
 
 export const Route = createFileRoute("/scorecard")({
   head: () => ({
@@ -11,19 +30,20 @@ export const Route = createFileRoute("/scorecard")({
 });
 
 function MetricCard({ label, score }: { label: string; score: number }) {
+  const animated = useCountUp(score, 1200);
   return (
     <div className="rounded-xl border border-[#262626] bg-[#161616] p-4">
       <div className="text-[11px] tracking-[0.12em] font-semibold uppercase text-neutral-400">
         {label}
       </div>
       <div className="mt-2 flex items-baseline gap-1 text-white">
-        <span className="text-2xl font-bold">{score}</span>
+        <span className="text-2xl font-bold">{animated}</span>
         <span className="text-xs text-neutral-400">/ 10</span>
       </div>
       <div className="mt-2 h-1 rounded-full bg-[#262626] overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-indigo-400 to-fuchsia-400"
-          style={{ width: `${(score / 10) * 100}%` }}
+          style={{ width: `${(animated / 10) * 100}%` }}
         />
       </div>
     </div>
@@ -102,7 +122,7 @@ function ScorecardPage() {
       return;
     }
     const text = `My MockMate Scorecard 🎯
-Overall: ${outOf10.toFixed(1)}/10
+Overall: ${animatedOverall.toFixed(1)}/10
 Clarity: ${data.clarity} | Relevance: ${data.relevance} | Structure: ${data.structure} | Confidence: ${data.confidence}
 Filler words: ${data.fillers ? data.fillers.total : 0}
 Best answer: ${bestQ ? bestQ.question : "N/A"}
@@ -137,7 +157,7 @@ Practice at mockmate.r3810891.workers.dev`;
     typeof data.overallOutOf10 === "number"
       ? data.overallOutOf10
       : Math.round((data.overall / 10) * 10) / 10;
-
+  const animatedOverall = useCountUp(outOf10, 1500);
   const fillerBreakdown = data.fillers
     ? Object.entries(data.fillers.breakdown).filter(([, c]) => c > 0)
     : [];
@@ -180,7 +200,7 @@ Practice at mockmate.r3810891.workers.dev`;
             </div>
             <div className="mt-3 flex items-baseline justify-center gap-2">
               <span className="text-6xl sm:text-7xl font-bold bg-gradient-to-r from-indigo-300 to-fuchsia-300 bg-clip-text text-transparent">
-                {outOf10.toFixed(1)}
+                {animatedOverall.toFixed(1)}
               </span>
               <span className="text-xl text-neutral-400">/ 10</span>
             </div>
