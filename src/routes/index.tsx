@@ -126,7 +126,7 @@ function HomePage() {
           AI Interview Coach
         </div>
 
-        <h1 className="mt-6 text-center text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
+        <h1 className="mt-6 text-center text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1] animate-fade-up">
           Practice like it's the{" "}
           <span className="text-gradient">real thing.</span>
         </h1>
@@ -136,7 +136,7 @@ function HomePage() {
         </p>
 
         <div
-          className="mt-10 w-full rounded-[20px] border border-border bg-card p-6 sm:p-8 shadow-2xl"
+          className="mt-10 w-full rounded-[20px] border border-border bg-card p-6 sm:p-8 shadow-2xl glass animate-fade-up-delay"
         >
           {/* Role input */}
           <label className="block text-[11px] tracking-[0.12em] font-semibold uppercase text-muted-foreground">
@@ -224,7 +224,7 @@ function HomePage() {
             type="button"
             disabled={!canStart}
             onClick={start}
-            className={`mt-7 w-full rounded-xl py-3.5 text-sm sm:text-base font-semibold transition ${
+           className={`mt-7 w-full rounded-xl py-3.5 text-sm sm:text-base font-semibold transition btn-lift ${
                 canStart
               ? "bg-gradient-primary text-primary-foreground shadow-glow hover:opacity-95 btn-glow-active"
               : "bg-secondary/40 text-muted-foreground cursor-not-allowed"
