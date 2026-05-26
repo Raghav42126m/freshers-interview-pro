@@ -172,8 +172,12 @@ Practice at mockmate.r3810891.workers.dev`;
         const a = document.createElement("a");
         a.href = url;
         a.download = "mockmate-scorecard.png";
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 1000);
       }, "image/png");
     } catch (err) {
       console.error("Save failed:", err);
