@@ -151,7 +151,6 @@ Practice at mockmate.r3810891.workers.dev`;
       console.error("Share failed:", err);
     }
   };
-
   const handleSaveImage = async () => {
     const element = document.getElementById("scorecard-capture");
     if (!element) return;
@@ -166,18 +165,39 @@ Practice at mockmate.r3810891.workers.dev`;
           if (el) normalizeColorsForCapture(el);
         },
       });
-      canvas.toBlob((blob) => {
+      const dataUrl = canvas.toDataURL("image/png");
+      
+      // Try native share with image first
+      canvas.toBlob(async (blob) => {
         if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "mockmate-scorecard.png";
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 1000);
+        try {
+          const file = new File([blob], "mockmate-scorecard.png", { type: "image/png" });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: "MockMate Scorecard" });
+          } else {
+            // Fallback: open image in new tab — user can long press to save
+            const w = window.open();
+            if (w) {
+              w.document.write(`
+                <html><body style="margin:0;background:#000;display:flex;flex-direction:column;align-items:center;padding:16px">
+                <p style="color:#fff;font-family:sans-serif;margin-bottom:12px">Press & hold image → Save to Photos</p>
+                <img src="${dataUrl}" style="width:100%;max-width:600px;border-radius:12px">
+                </body></html>
+              `);
+            }
+          }
+        } catch {
+          // Last fallback
+          const w = window.open();
+          if (w) {
+            w.document.write(`
+              <html><body style="margin:0;background:#000;display:flex;flex-direction:column;align-items:center;padding:16px">
+              <p style="color:#fff;font-family:sans-serif;margin-bottom:12px">Press & hold image → Save to Photos</p>
+              <img src="${dataUrl}" style="width:100%;max-width:600px;border-radius:12px">
+              </body></html>
+            `);
+          }
+        }
       }, "image/png");
     } catch (err) {
       console.error("Save failed:", err);
