@@ -194,3 +194,8 @@
   border: 2px solid rgba(139, 92, 246, 0.5);
   animation: pingRing 1.5s ease-out infinite;
 }
+/* Progress bar smooth animation */
+[role="progressbar"] > div,
+.progress-bar-fill {
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
