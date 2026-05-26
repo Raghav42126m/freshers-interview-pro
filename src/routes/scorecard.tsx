@@ -96,42 +96,30 @@ function ScorecardPage() {
   const isMobile =
     typeof navigator !== "undefined" &&
     /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
   const handleDownload = async () => {
     if (!isMobile) {
       window.print();
       return;
     }
-    const element = document.getElementById("scorecard-capture");
-    if (!element) return;
-    setDownloading(true);
+    const text = `My MockMate Scorecard 🎯
+Overall: ${outOf10.toFixed(1)}/10
+Clarity: ${data.clarity} | Relevance: ${data.relevance} | Structure: ${data.structure} | Confidence: ${data.confidence}
+Filler words: ${data.fillers ? data.fillers.total : 0}
+Best answer: ${bestQ ? bestQ.question : "N/A"}
+Key tip: ${data.keyTip || "Keep practising!"}
+Practice at mockmate.r3810891.workers.dev`;
+
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#0f0f0f",
-        onclone: (doc) => {
-          const el = doc.getElementById("scorecard-capture");
-          if (el) normalizeColorsForCapture(el);
-        },
-      });
-      const dataUrl = canvas.toDataURL("image/png");
-      const t = window.open();
-      if (t) {
-        t.document.write(
-          `<img src="${dataUrl}" style="width:100%;max-width:600px;display:block;margin:auto;">`,
-        );
-        t.document.write(
-          '<p style="text-align:center;font-family:sans-serif;color:#666;">Press and hold image → Save to Photos</p>',
-        );
+      if (navigator.share) {
+        await navigator.share({ text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        alert("Copied to clipboard! Paste anywhere to share.");
       }
     } catch (err) {
-      console.error("Download failed:", err);
-    } finally {
-      setDownloading(false);
+      console.error("Share failed:", err);
     }
   };
-
   const handleSubmitFeedback = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
@@ -162,12 +150,13 @@ function ScorecardPage() {
   return (
     <main className="min-h-screen px-4 py-12">
       <style>{`
-        @media print {
-          @page { size: portrait; margin: 0; }
-          body * { visibility: hidden !important; }
-          #scorecard-capture, #scorecard-capture * { visibility: visible !important; }
-          #scorecard-capture { position: absolute; left: 0; top: 0; width: 100%; }
-        }
+      @media print {
+      @page { size: A4 portrait; margin: 10mm; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body * { visibility: hidden !important; }
+      #scorecard-capture, #scorecard-capture * { visibility: visible !important; }
+      #scorecard-capture { position: absolute; left: 0; top: 0; width: 100%; }
+      }
       `}</style>
       <div className="max-w-[640px] mx-auto">
         <div
@@ -301,7 +290,7 @@ function ScorecardPage() {
             disabled={downloading}
             className="w-full rounded-xl bg-gradient-primary py-3 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-60"
           >
-            {downloading ? "Generating image…" : isMobile ? "Save as Image" : "Download PDF"}
+            {isMobile ? "Share Scorecard" : "Download PDF"}
           </button>
           <button
             type="button"
