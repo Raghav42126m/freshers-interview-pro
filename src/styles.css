@@ -150,3 +150,46 @@
 .btn-glow-active {
   animation: glow-pulse 2s ease-in-out infinite;
 }
+/* Glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Fade up animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.5s ease forwards;
+}
+.animate-fade-up-delay {
+  animation: fadeUp 0.5s ease 0.2s forwards;
+  opacity: 0;
+}
+
+/* Button hover lift */
+.btn-lift {
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+.btn-lift:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3) !important;
+}
+
+/* Avatar pulse ring */
+@keyframes pingRing {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.avatar-ring::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid rgba(139, 92, 246, 0.5);
+  animation: pingRing 1.5s ease-out infinite;
+}
