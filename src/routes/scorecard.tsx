@@ -152,6 +152,36 @@ Practice at mockmate.r3810891.workers.dev`;
     }
   };
 
+  const handleSaveImage = async () => {
+    const element = document.getElementById("scorecard-capture");
+    if (!element) return;
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#0f0f0f",
+        onclone: (doc) => {
+          const el = doc.getElementById("scorecard-capture");
+          if (el) normalizeColorsForCapture(el);
+        },
+      });
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "mockmate-scorecard.png";
+        a.click();
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    } catch (err) {
+      console.error("Save failed:", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const handleSubmitFeedback = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
@@ -313,14 +343,33 @@ Practice at mockmate.r3810891.workers.dev`;
         </div>
 
         <div className="mt-10 flex flex-col gap-3">
-          <button
-            type="button"
-            onClick={handleDownload}
-            disabled={downloading}
-            className="w-full rounded-xl bg-gradient-primary py-3 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-60"
-          >
-            {isMobile ? "Share Scorecard" : "Download PDF"}
-          </button>
+          {isMobile ? (
+            <>
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="w-full rounded-xl bg-gradient-primary py-3 text-sm font-semibold text-primary-foreground shadow-glow"
+              >
+                Share Scorecard
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveImage}
+                disabled={downloading}
+                className="w-full rounded-xl border border-border bg-secondary/40 py-3 text-sm font-semibold hover:bg-secondary/60 disabled:opacity-60"
+              >
+                {downloading ? "Generating…" : "Save as Image"}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="w-full rounded-xl bg-gradient-primary py-3 text-sm font-semibold text-primary-foreground shadow-glow"
+            >
+              Download PDF
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
