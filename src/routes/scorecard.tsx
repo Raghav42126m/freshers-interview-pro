@@ -297,7 +297,7 @@ Practice at mockmate.r3810891.workers.dev`;
           </h2>
           <div className="mt-4 space-y-3">
             {data.feedback.map((f, i) => (
-              <div key={i} className="rounded-xl border border-border bg-card p-4">
+              <div key={i} className="rounded-xl border border-white/8 bg-white/4 backdrop-blur-md p-4" style={{background: "rgba(255,255,255,0.04)", backdropFilter: "blur(12px)", borderColor: "rgba(255,255,255,0.08)"}}>
                 <div className="text-xs text-muted-foreground">Question {i + 1}</div>
                 <div className="mt-1 text-sm font-medium">{f.question}</div>
                 <div className="mt-2 text-xs text-muted-foreground line-clamp-3">
