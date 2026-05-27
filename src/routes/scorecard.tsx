@@ -205,8 +205,17 @@ Practice at mockmate.r3810891.workers.dev`;
       setDownloading(false);
     }
   };
-  const handleSubmitFeedback = (e: React.FormEvent) => {
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      await supabase.from("feedback").insert({
+        rating,
+        text: feedbackText || null,
+      });
+    } catch (err) {
+      console.error("Feedback save failed:", err);
+    }
     setSubmitted(true);
   };
 
