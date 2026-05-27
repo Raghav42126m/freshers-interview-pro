@@ -21,6 +21,8 @@ export const Route = createFileRoute("/interview")({
 
 type Status = "thinking" | "speaking" | "listening";
 
+const ANSWER_TIME = 120; // seconds per question
+
 function InterviewPage() {
   const navigate = useNavigate();
   const evaluate = useServerFn(evaluateInterview);
@@ -31,6 +33,8 @@ function InterviewPage() {
   const [draft, setDraft] = useState("");
   const [status, setStatus] = useState<Status>("thinking");
   const [submitting, setSubmitting] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(ANSWER_TIME);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const spokenForIdx = useRef<number>(-1);
 
   useEffect(() => {
@@ -56,11 +60,45 @@ function InterviewPage() {
 
   useEffect(() => () => stopSpeaking(), []);
 
+  // Timer — starts when listening, resets on question change
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTimeLeft(ANSWER_TIME);
+    if (status !== "listening") return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          clearInterval(timerRef.current!);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [status, idx]);
+
   const total = questions.length;
   const progress = total ? ((idx + 1) / total) * 100 : 0;
   const current = questions[idx] ?? "";
 
+  const timerPercent = (timeLeft / ANSWER_TIME) * 100;
+  const timerColor =
+    timeLeft > 60
+      ? "text-success"
+      : timeLeft > 30
+        ? "text-warning"
+        : "text-destructive";
+  const timerRingColor =
+    timeLeft > 60
+      ? "stroke-green-400"
+      : timeLeft > 30
+        ? "stroke-yellow-400"
+        : "stroke-red-400";
+
   const submitAnswer = async (override?: string) => {
+    if (timerRef.current) clearInterval(timerRef.current);
     const text = (override ?? draft).trim();
     const next = [...answers];
     next[idx] = text;
@@ -115,6 +153,8 @@ function InterviewPage() {
     speaking: "Speaking…",
     listening: "Listening…",
   }[status];
+
+  const circumference = 2 * Math.PI * 20;
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -184,16 +224,45 @@ function InterviewPage() {
 
         {/* Answer */}
         <section>
-          <label className="block text-[11px] tracking-[0.12em] font-semibold uppercase text-muted-foreground">
-            Your Answer
-          </label>
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-[11px] tracking-[0.12em] font-semibold uppercase text-muted-foreground">
+              Your Answer
+            </label>
+            {/* Timer */}
+            {status === "listening" && !submitting && (
+              <div className="flex items-center gap-2">
+                <svg width="48" height="48" viewBox="0 0 48 48" className="-rotate-90">
+                  <circle
+                    cx="24" cy="24" r="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    className="text-secondary/40"
+                  />
+                  <circle
+                    cx="24" cy="24" r="20"
+                    fill="none"
+                    strokeWidth="3"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={circumference - (timerPercent / 100) * circumference}
+                    strokeLinecap="round"
+                    className={`${timerRingColor} transition-all duration-1000`}
+                  />
+                </svg>
+                <span className={`text-sm font-bold tabular-nums ${timerColor} absolute`}
+                  style={{ marginLeft: "12px" }}>
+                  {timeLeft}s
+                </span>
+              </div>
+            )}
+          </div>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             disabled={submitting}
             rows={6}
             placeholder="Type your answer here…"
-            className="mt-3 w-full rounded-xl border border-border bg-[oklch(0.11_0.012_280)] px-4 py-3 text-sm placeholder:text-muted-foreground/60 outline-none transition input-glow resize-none"
+            className="mt-1 w-full rounded-xl border border-border bg-[oklch(0.11_0.012_280)] px-4 py-3 text-sm placeholder:text-muted-foreground/60 outline-none transition input-glow resize-none"
           />
           <div className="mt-2 flex items-center justify-between">
             <div className="text-xs text-muted-foreground">{draft.length} characters</div>
