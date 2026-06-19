@@ -91,3 +91,56 @@ export const fillerStore = {
   },
   clear: () => sessionStorage.removeItem(FILLER_KEY),
 };
+// ---- Session history (persists across browser sessions via localStorage) ----
+
+export interface HistoryEntry {
+  id: string;
+  date: string; // ISO timestamp
+  role: string;
+  type: InterviewType;
+  difficulty: Difficulty;
+  overallOutOf10: number;
+  clarity: number;
+  relevance: number;
+  structure: number;
+  confidence: number;
+  fillerTotal: number;
+  questionCount: number;
+}
+
+const HISTORY_KEY = "mm_history";
+const MAX_HISTORY = 50;
+
+export const historyStore = {
+  getAll: (): HistoryEntry[] => {
+    try {
+      const v = localStorage.getItem(HISTORY_KEY);
+      return v ? JSON.parse(v) : [];
+    } catch {
+      return [];
+    }
+  },
+  add: (entry: Omit<HistoryEntry, "id" | "date">) => {
+    try {
+      const all = historyStore.getAll();
+      const next: HistoryEntry = {
+        ...entry,
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        date: new Date().toISOString(),
+      };
+      all.unshift(next);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(all.slice(0, MAX_HISTORY)));
+      return next;
+    } catch (e) {
+      console.error("Failed to save history entry:", e);
+      return null;
+    }
+  },
+  clear: () => {
+    try {
+      localStorage.removeItem(HISTORY_KEY);
+    } catch {
+      // ignore
+    }
+  },
+};
