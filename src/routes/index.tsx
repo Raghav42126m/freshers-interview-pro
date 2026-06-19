@@ -109,6 +109,7 @@ function HomePage() {
       questionsStore.set(questions);
       answersStore.set(new Array(questions.length).fill(""));
       fillerStore.clear();
+      sessionStorage.removeItem("mm_history_saved");
       navigate({ to: "/interview" });
     } catch (e) {
       console.error(e);
