@@ -132,7 +132,6 @@ function InterviewPage() {
   };
 
   const submitAnswer = async (override?: string) => {
-  const submitAnswer = async (override?: string) => {
     if (timerRef.current) clearInterval(timerRef.current);
     const text = (override ?? draft).trim();
     const next = [...answers];
