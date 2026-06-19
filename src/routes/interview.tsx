@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
-import { evaluateInterview } from "@/lib/groq.functions";
+import { evaluateInterview, generateHint } from "@/lib/groq.functions";
 import {
   answersStore,
   fillerStore,
@@ -24,8 +24,9 @@ type Status = "thinking" | "speaking" | "listening";
 const ANSWER_TIME = 120; // seconds per question
 
 function InterviewPage() {
-  const navigate = useNavigate();
+ const navigate = useNavigate();
   const evaluate = useServerFn(evaluateInterview);
+  const getHint = useServerFn(generateHint);
 
   const [questions, setQuestions] = useState<string[]>([]);
   const [answers, setAnswers] = useState<string[]>([]);
@@ -34,6 +35,9 @@ function InterviewPage() {
   const [status, setStatus] = useState<Status>("thinking");
   const [submitting, setSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState(ANSWER_TIME);
+  const [hint, setHint] = useState<{ approach: string; pointers: string[] } | null>(null);
+  const [hintLoading, setHintLoading] = useState(false);
+  const [hintOpen, setHintOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const spokenForIdx = useRef<number>(-1);
 
@@ -79,6 +83,12 @@ function InterviewPage() {
     };
   }, [status, idx]);
 
+  // Reset hint when moving to a new question
+  useEffect(() => {
+    setHint(null);
+    setHintOpen(false);
+  }, [idx]);
+
   const total = questions.length;
   const progress = total ? ((idx + 1) / total) * 100 : 0;
   const current = questions[idx] ?? "";
@@ -96,7 +106,32 @@ function InterviewPage() {
       : timeLeft > 30
         ? "stroke-yellow-400"
         : "stroke-red-400";
+  const fetchHint = async () => {
+    if (hint || hintLoading) {
+      setHintOpen((v) => !v);
+      return;
+    }
+    const setup = setupStore.get();
+    if (!setup) return;
+    setHintLoading(true);
+    setHintOpen(true);
+    try {
+      const result = await getHint({
+        data: { role: setup.role, type: setup.type, question: current },
+      });
+      setHint(result);
+    } catch (e) {
+      console.error(e);
+      setHint({
+        approach: "Couldn't load a hint right now — try answering with the STAR method (Situation, Task, Action, Result).",
+        pointers: [],
+      });
+    } finally {
+      setHintLoading(false);
+    }
+  };
 
+  const submitAnswer = async (override?: string) => {
   const submitAnswer = async (override?: string) => {
     if (timerRef.current) clearInterval(timerRef.current);
     const text = (override ?? draft).trim();
@@ -221,6 +256,38 @@ function InterviewPage() {
             </button>
           </div>
         </section>
+        {/* Hint */}
+          <div className="mt-4 w-full">
+            <button
+              type="button"
+              onClick={fetchHint}
+              disabled={hintLoading}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-300 hover:text-amber-200 transition disabled:opacity-60"
+            >
+              💡 {hintLoading ? "Thinking of a hint…" : hintOpen ? "Hide hint" : "Need a hint?"}
+            </button>
+            {hintOpen && (
+              <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-left">
+                {hintLoading ? (
+                  <div className="text-xs text-amber-200/80">Thinking of a hint…</div>
+                ) : hint ? (
+                  <>
+                    <div className="text-xs font-semibold text-amber-200">{hint.approach}</div>
+                    {hint.pointers.length > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {hint.pointers.map((p, i) => (
+                          <li key={i} className="text-xs text-amber-100/90 flex gap-1.5">
+                            <span className="text-amber-300">•</span>
+                            <span>{p}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                ) : null}
+              </div>
+            )}
+          </div>
 
         {/* Answer */}
         <section>
