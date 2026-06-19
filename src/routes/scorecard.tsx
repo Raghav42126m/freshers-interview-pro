@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import html2canvas from "html2canvas";
-import { scorecardStore, type Scorecard } from "@/lib/interview-store";
+import { scorecardStore, setupStore, historyStore, type Scorecard } from "@/lib/interview-store";
 
 function useCountUp(target: number, duration = 1000) {
   const [count, setCount] = useState(0);
@@ -120,6 +120,29 @@ function ScorecardPage() {
       return;
     }
     setData(s);
+
+    // Save this completed interview to permanent (cross-session) history,
+    // guarding against double-save on re-render/strict-mode remounts.
+    const setup = setupStore.get();
+    if (setup && !sessionStorage.getItem("mm_history_saved")) {
+      const score =
+        typeof s.overallOutOf10 === "number"
+          ? s.overallOutOf10
+          : Math.round((s.overall / 10) * 10) / 10;
+      historyStore.add({
+        role: setup.role,
+        type: setup.type,
+        difficulty: setup.difficulty,
+        overallOutOf10: score,
+        clarity: s.clarity,
+        relevance: s.relevance,
+        structure: s.structure,
+        confidence: s.confidence,
+        fillerTotal: s.fillers?.total ?? 0,
+        questionCount: s.feedback.length,
+      });
+      sessionStorage.setItem("mm_history_saved", "1");
+    }
   }, [navigate]);
 
   const isMobile =
