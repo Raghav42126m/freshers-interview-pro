@@ -15,7 +15,11 @@ interface EvaluateInput {
   difficulty: string;
   qa: { question: string; answer: string }[];
 }
-
+interface HintInput {
+  role: string;
+  type: string;
+  question: string;
+}
 async function callGroq(messages: { role: string; content: string }[], jsonMode = true) {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("GROQ_API_KEY not configured");
@@ -130,5 +134,28 @@ Score honestly. Empty/very short answers should score low.`;
       weakestAnswerSuggestion: String(parsed.weakestAnswerSuggestion ?? ""),
       keyTip: String(parsed.keyTip ?? ""),
       feedback,
+    };
+  });
+export const generateHint = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => d as HintInput)
+  .handler(async ({ data }) => {
+    const sys = `You are an experienced Indian interview coach. Given one interview question, give the candidate a short hint on HOW to structure their answer — not a full scripted answer. Return ONLY JSON: {"approach": "<1 sentence on the structure/approach to use, <30 words>", "pointers": ["<short bullet point to mention>", "<short bullet point>", "<short bullet point>"]}. 2-4 pointers. Do not write the full answer for them — only the approach and what to touch on.`;
+    const user = `Role: ${data.role}
+Round: ${TYPE_LABEL[data.type] ?? data.type}
+Question: ${data.question}
+
+Give a brief structural hint, not a full answer.`;
+
+    const raw = await callGroq([
+      { role: "system", content: sys },
+      { role: "user", content: user },
+    ]);
+    const parsed = JSON.parse(raw);
+    const pointers: string[] = Array.isArray(parsed.pointers)
+      ? parsed.pointers.slice(0, 4).map((p: unknown) => String(p))
+      : [];
+    return {
+      approach: String(parsed.approach ?? ""),
+      pointers,
     };
   });
