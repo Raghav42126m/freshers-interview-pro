@@ -435,6 +435,13 @@ Practice at mockmate.r3810891.workers.dev`;
           >
             Practice Again
           </button>
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/history" })}
+            className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+          >
+            See your progress over time →
+          </button>
           {!showFeedback && (
             <button
               type="button"
