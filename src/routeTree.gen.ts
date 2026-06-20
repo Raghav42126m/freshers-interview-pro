@@ -13,6 +13,7 @@ import { Route as ScorecardRouteImport } from './routes/scorecard'
 import { Route as InterviewRouteImport } from './routes/interview'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicFeedbackWebhookRouteImport } from './routes/api/public/feedback-webhook'
 
 const ScorecardRoute = ScorecardRouteImport.update({
   id: '/scorecard',
@@ -34,18 +35,26 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicFeedbackWebhookRoute =
+  ApiPublicFeedbackWebhookRouteImport.update({
+    id: '/api/public/feedback-webhook',
+    path: '/api/public/feedback-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
   '/interview': typeof InterviewRoute
   '/scorecard': typeof ScorecardRoute
+  '/api/public/feedback-webhook': typeof ApiPublicFeedbackWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
   '/interview': typeof InterviewRoute
   '/scorecard': typeof ScorecardRoute
+  '/api/public/feedback-webhook': typeof ApiPublicFeedbackWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +62,30 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/interview': typeof InterviewRoute
   '/scorecard': typeof ScorecardRoute
+  '/api/public/feedback-webhook': typeof ApiPublicFeedbackWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/history' | '/interview' | '/scorecard'
+  fullPaths:
+    | '/'
+    | '/history'
+    | '/interview'
+    | '/scorecard'
+    | '/api/public/feedback-webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/history' | '/interview' | '/scorecard'
-  id: '__root__' | '/' | '/history' | '/interview' | '/scorecard'
+  to:
+    | '/'
+    | '/history'
+    | '/interview'
+    | '/scorecard'
+    | '/api/public/feedback-webhook'
+  id:
+    | '__root__'
+    | '/'
+    | '/history'
+    | '/interview'
+    | '/scorecard'
+    | '/api/public/feedback-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +93,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   InterviewRoute: typeof InterviewRoute
   ScorecardRoute: typeof ScorecardRoute
+  ApiPublicFeedbackWebhookRoute: typeof ApiPublicFeedbackWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/feedback-webhook': {
+      id: '/api/public/feedback-webhook'
+      path: '/api/public/feedback-webhook'
+      fullPath: '/api/public/feedback-webhook'
+      preLoaderRoute: typeof ApiPublicFeedbackWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +141,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   InterviewRoute: InterviewRoute,
   ScorecardRoute: ScorecardRoute,
+  ApiPublicFeedbackWebhookRoute: ApiPublicFeedbackWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
