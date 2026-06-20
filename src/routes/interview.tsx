@@ -254,8 +254,8 @@ function InterviewPage() {
               🔊 Replay
             </button>
           </div>
-        </section>
-        {/* Hint */}
+
+          {/* Hint */}
           <div className="mt-4 w-full">
             <button
               type="button"
@@ -287,6 +287,7 @@ function InterviewPage() {
               </div>
             )}
           </div>
+        </section>
 
         {/* Answer */}
         <section>
