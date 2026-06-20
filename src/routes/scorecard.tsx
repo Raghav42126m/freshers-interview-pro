@@ -425,7 +425,7 @@ Practice at mockmate.r3810891.workers.dev`;
               Download PDF
             </button>
           )}
-          <button
+         <button
             type="button"
             onClick={() => {
               sessionStorage.clear();
@@ -434,6 +434,13 @@ Practice at mockmate.r3810891.workers.dev`;
             className="w-full rounded-xl border border-border bg-secondary/40 py-3 text-sm font-semibold hover:bg-secondary/60"
           >
             Practice Again
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/history" })}
+            className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+          >
+            See your progress over time →
           </button>
           {!showFeedback && (
             <button

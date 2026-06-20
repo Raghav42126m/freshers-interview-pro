@@ -123,10 +123,19 @@ function HomePage() {
       <div className="absolute top-[-200px] left-[-100px] w-[500px] h-[500px] rounded-full bg-indigo-600/20 blur-[120px] pointer-events-none" />
 <div className="absolute bottom-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full bg-fuchsia-600/15 blur-[120px] pointer-events-none" />
       <div className="w-full max-w-[560px] flex flex-col items-center">
-        {/* Pill badge */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-3 py-1 text-xs font-medium text-primary-foreground/90 badge-shimmer">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary pulse-dot" />
-          AI Interview Coach
+       {/* Pill badge + history link */}
+        <div className="w-full flex items-center justify-between">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-3 py-1 text-xs font-medium text-primary-foreground/90 badge-shimmer">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary pulse-dot" />
+            AI Interview Coach
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/history" })}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Your progress →
+          </button>
         </div>
 
         <h1 className="mt-6 text-center text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1] animate-fade-up">
