@@ -13,13 +13,14 @@ export const Route = createFileRoute("/api/public/feedback-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = process.env.FEEDBACK_WEBHOOK_SECRET;
+        const secret = process.env.FEEDBACK_WEBHOOK_SECRET?.trim();
         const resendApiKey = process.env.RESEND_API_KEY;
 
         if (!secret) {
           return new Response("Webhook secret not configured", { status: 500 });
         }
-        if (request.headers.get("x-webhook-secret") !== secret) {
+        const provided = request.headers.get("x-webhook-secret")?.trim();
+        if (provided !== secret) {
           return new Response("Unauthorized", { status: 401 });
         }
         if (!resendApiKey) {
