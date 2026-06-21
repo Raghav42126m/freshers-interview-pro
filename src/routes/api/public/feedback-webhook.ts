@@ -13,14 +13,35 @@ export const Route = createFileRoute("/api/public/feedback-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = process.env.FEEDBACK_WEBHOOK_SECRET?.trim();
         const resendApiKey = process.env.RESEND_API_KEY;
+        const provided = request.headers.get("x-webhook-secret")?.trim() ?? "";
 
-        if (!secret) {
-          return new Response("Webhook secret not configured", { status: 500 });
+        // Primary check: env secret (if it was entered correctly).
+        const envSecret = process.env.FEEDBACK_WEBHOOK_SECRET?.trim();
+        let authorized = !!envSecret && provided === envSecret;
+
+        // Fallback: let the database verify against the literal baked into the
+        // trigger, so we never depend on a hand-entered value matching exactly.
+        if (!authorized && provided) {
+          try {
+            const { supabaseAdmin } = await import(
+              "@/integrations/supabase/client.server"
+            );
+            const { data, error } = await supabaseAdmin.rpc(
+              "verify_feedback_webhook_secret",
+              { candidate: provided },
+            );
+            if (error) {
+              console.error("verify_feedback_webhook_secret failed", error);
+            } else {
+              authorized = data === true;
+            }
+          } catch (e) {
+            console.error("Secret verification error", e);
+          }
         }
-        const provided = request.headers.get("x-webhook-secret")?.trim();
-        if (provided !== secret) {
+
+        if (!authorized) {
           return new Response("Unauthorized", { status: 401 });
         }
         if (!resendApiKey) {
