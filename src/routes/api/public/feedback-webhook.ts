@@ -1,5 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+// Constant-time string comparison so secret checks don't leak timing info.
+function safeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, "&amp;")
@@ -13,37 +23,19 @@ export const Route = createFileRoute("/api/public/feedback-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const resendApiKey = process.env.RESEND_API_KEY;
         const provided = request.headers.get("x-webhook-secret")?.trim() ?? "";
 
-        // Primary check: env secret (if it was entered correctly).
-        const envSecret = process.env.FEEDBACK_WEBHOOK_SECRET?.trim();
-        let authorized = !!envSecret && provided === envSecret;
-
-        // Fallback: let the database verify against the literal baked into the
-        // trigger, so we never depend on a hand-entered value matching exactly.
-        if (!authorized && provided) {
-          try {
-            const { supabaseAdmin } = await import(
-              "@/integrations/supabase/client.server"
-            );
-            const { data, error } = await supabaseAdmin.rpc(
-              "verify_feedback_webhook_secret",
-              { candidate: provided },
-            );
-            if (error) {
-              console.error("verify_feedback_webhook_secret failed", error);
-            } else {
-              authorized = data === true;
-            }
-          } catch (e) {
-            console.error("Secret verification error", e);
-          }
-        }
+        // Verify against the configured secret with a constant-time compare.
+        // No database/admin client is involved, so this route never depends on
+        // SUPABASE_SERVICE_ROLE_KEY being present in the runtime environment.
+        const envSecret = process.env.FEEDBACK_WEBHOOK_SECRET?.trim() ?? "";
+        const authorized = !!provided && !!envSecret && safeEqual(provided, envSecret);
 
         if (!authorized) {
           return new Response("Unauthorized", { status: 401 });
         }
+
+        const resendApiKey = process.env.RESEND_API_KEY;
         if (!resendApiKey) {
           return new Response("Resend API key not configured", { status: 500 });
         }
@@ -54,6 +46,7 @@ export const Route = createFileRoute("/api/public/feedback-webhook")({
         } catch {
           return new Response("Invalid JSON", { status: 400 });
         }
+
 
         const record = (payload?.record ?? {}) as Record<string, unknown>;
         const ratingValue = typeof record.rating === "number" ? record.rating : null;
