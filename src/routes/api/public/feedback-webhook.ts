@@ -1,5 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+// Constant-time string comparison so secret checks don't leak timing info.
+function safeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, "&amp;")
