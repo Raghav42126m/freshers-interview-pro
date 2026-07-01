@@ -1,14 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-
-// Constant-time string comparison so secret checks don't leak timing info.
-function safeEqual(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i++) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return mismatch === 0;
-}
+import { createClient } from "@supabase/supabase-js";
 
 function escapeHtml(s: string) {
   return s
@@ -19,21 +10,39 @@ function escapeHtml(s: string) {
     .replace(/'/g, "&#39;");
 }
 
+// Verify the incoming webhook secret against the value stored in Vault via a
+// service-role RPC. The secret is never hardcoded anywhere; the client is
+// created lazily inside the handler so this never affects page SSR.
+async function verifyWebhookSecret(provided: string): Promise<boolean> {
+  if (!provided) return false;
+  const url = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) return false;
+
+  const supabase = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await supabase.rpc("verify_feedback_webhook_secret", {
+    candidate: provided,
+  });
+  if (error) {
+    console.error("Webhook secret verification failed", error.message);
+    return false;
+  }
+  return data === true;
+}
+
 export const Route = createFileRoute("/api/public/feedback-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const provided = request.headers.get("x-webhook-secret")?.trim() ?? "";
 
-        // Verify against the configured secret with a constant-time compare.
-        // No database/admin client is involved, so this route never depends on
-        // SUPABASE_SERVICE_ROLE_KEY being present in the runtime environment.
-        const envSecret = process.env.FEEDBACK_WEBHOOK_SECRET?.trim() ?? "";
-        const authorized = !!provided && !!envSecret && safeEqual(provided, envSecret);
-
+        const authorized = await verifyWebhookSecret(provided);
         if (!authorized) {
           return new Response("Unauthorized", { status: 401 });
         }
+
 
         const resendApiKey = process.env.RESEND_API_KEY;
         if (!resendApiKey) {

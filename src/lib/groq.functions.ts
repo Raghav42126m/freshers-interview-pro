@@ -1,25 +1,42 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL = "llama-3.3-70b-versatile";
 
-interface GenerateInput {
-  role: string;
-  type: string;
-  difficulty: string;
-}
+// Runtime input validation caps abuse of the (public) Groq-backed endpoints:
+// oversized/malformed payloads are rejected before any token is spent upstream.
+const typeSchema = z.enum(["hr", "technical", "behavioral", "full"]);
+const difficultySchema = z.enum(["easy", "medium", "hard"]);
+const roleSchema = z.string().trim().min(1).max(120);
 
-interface EvaluateInput {
-  role: string;
-  type: string;
-  difficulty: string;
-  qa: { question: string; answer: string }[];
-}
-interface HintInput {
-  role: string;
-  type: string;
-  question: string;
-}
+const generateSchema = z.object({
+  role: roleSchema,
+  type: typeSchema,
+  difficulty: difficultySchema,
+});
+
+const evaluateSchema = z.object({
+  role: roleSchema,
+  type: typeSchema,
+  difficulty: difficultySchema,
+  qa: z
+    .array(
+      z.object({
+        question: z.string().max(1000),
+        answer: z.string().max(8000),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+
+const hintSchema = z.object({
+  role: roleSchema,
+  type: typeSchema,
+  question: z.string().trim().min(1).max(1000),
+});
+
 async function callGroq(messages: { role: string; content: string }[], jsonMode = true) {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("GROQ_API_KEY not configured");
@@ -54,7 +71,7 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export const generateQuestions = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => d as GenerateInput)
+  .inputValidator((d: unknown) => generateSchema.parse(d))
   .handler(async ({ data }) => {
     const sys = `You are an experienced Indian tech interviewer. Generate exactly 10 sharp, role-specific interview questions for a fresher candidate. Return ONLY JSON in the form: {"questions": ["q1", "q2", ...]}. No commentary.`;
     const user = `Role: ${data.role}
@@ -74,7 +91,7 @@ Generate 10 questions appropriate for this round and difficulty. Mix easier open
   });
 
 export const evaluateInterview = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => d as EvaluateInput)
+  .inputValidator((d: unknown) => evaluateSchema.parse(d))
   .handler(async ({ data }) => {
     const sys = `You are a strict but fair Indian interview coach. Evaluate the candidate's answers. Return ONLY JSON in this exact shape:
 {
@@ -137,7 +154,7 @@ Score honestly. Empty/very short answers should score low.`;
     };
   });
 export const generateHint = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => d as HintInput)
+  .inputValidator((d: unknown) => hintSchema.parse(d))
   .handler(async ({ data }) => {
     const sys = `You are an experienced Indian interview coach. Given one interview question, give the candidate a short hint on HOW to structure their answer — not a full scripted answer. Return ONLY JSON: {"approach": "<1 sentence on the structure/approach to use, <30 words>", "pointers": ["<short bullet point to mention>", "<short bullet point>", "<short bullet point>"]}. 2-4 pointers. Do not write the full answer for them — only the approach and what to touch on.`;
     const user = `Role: ${data.role}
