@@ -54,16 +54,33 @@ function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boole
 // {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
+
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) return response;
 
   const body = await response.clone().text();
+
   if (!isCatastrophicSsrErrorBody(body, response.status)) {
     return response;
   }
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
-  return brandedErrorResponse();
+  const original = consumeLastCapturedError();
+
+  console.error("Original SSR Error:", original);
+
+  if (original instanceof Error) {
+    console.error("Message:", original.message);
+    console.error("Stack:", original.stack);
+  }
+
+  console.error("HTTP Body:", body);
+
+  return new Response(body, {
+    status: response.status,
+    headers: {
+      "content-type": "application/json",
+    },
+  });
 }
 
 export default {
@@ -73,8 +90,25 @@ export default {
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
-      console.error(error);
-      return brandedErrorResponse();
+      console.error("SSR Catch Error:", error);
+
+      if (error instanceof Error) {
+        console.error("Message:", error.message);
+        console.error("Stack:", error.stack);
+      }
+
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : null,
+        }),
+        {
+          status: 500,
+          headers: {
+            "content-type": "application/json",
+          },
+        }
+      );
     }
   },
 };
